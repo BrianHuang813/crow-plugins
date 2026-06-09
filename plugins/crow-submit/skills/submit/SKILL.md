@@ -4,7 +4,7 @@ description: Submit your project to the Crow Digital Darwinism grid. Authenticat
 
 # /crow-submit — Submit to the Crow Grid
 
-You are helping the user submit their current project to crow.gg.
+You are helping the user submit their current project to the Crow grid (crow-eight.vercel.app).
 Follow these steps **in exact order**. Do not skip steps.
 
 ## Setup
@@ -13,6 +13,7 @@ Run this first to set constants used throughout:
 
 ```bash
 CROW_API="${CROW_API_URL:-https://api-production-1f00d.up.railway.app}"
+CROW_WEB="${CROW_WEB_URL:-https://crow-eight.vercel.app}"
 TOKEN_FILE="$HOME/.crow/token"
 ```
 
@@ -297,8 +298,7 @@ if [ "$SUBMIT_STATUS" = "201" ]; then
   printf "  ║  Expires: %-46s║\n" "$PROJ_EXPIRES"
   printf "  ║  Cells:   %-46s║\n" "$PROJ_CELLS cell(s) claimed"
   echo "  ║                                                        ║"
-  CROW_BASE="${CROW_API%/api*}"
-  printf "  ║  → %s/p/%-37s║\n" "$CROW_BASE" "$PROJ_ID"
+  printf "  ║  → %s/p/%-37s║\n" "$CROW_WEB" "$PROJ_ID"
   echo "  ╚════════════════════════════════════════════════════════╝"
   echo ""
   exit 0

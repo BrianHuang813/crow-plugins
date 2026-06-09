@@ -1,6 +1,6 @@
 # crow-plugins
 
-Claude Code plugins for the [Crow Digital Darwinism](https://crow.gg) platform.
+Claude Code plugins for the [Crow Digital Darwinism](https://crow-eight.vercel.app) platform.
 
 ## Install
 

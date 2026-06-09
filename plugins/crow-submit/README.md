@@ -1,6 +1,6 @@
 # crow-submit
 
-A Claude Code plugin that submits your project to the [Crow Digital Darwinism grid](https://crow.gg) directly from your terminal — no browser required.
+A Claude Code plugin that submits your project to the [Crow Digital Darwinism grid](https://crow-eight.vercel.app) directly from your terminal — no browser required.
 
 ## What It Does
 
@@ -14,7 +14,7 @@ A Claude Code plugin that submits your project to the [Crow Digital Darwinism gr
 In Claude Code:
 
 ```
-/plugin marketplace add BrianHuang813/Crow
+/plugin marketplace add BrianHuang813/crow-plugins
 /plugin install crow-submit@crow
 ```
 
@@ -50,7 +50,8 @@ Your token is saved and reused for 30 days.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CROW_API_URL` | `https://api.crow.gg` | Override API (e.g. local dev) |
+| `CROW_API_URL` | `https://api-production-1f00d.up.railway.app` | Override the backend API (e.g. local dev) |
+| `CROW_WEB_URL` | `https://crow-eight.vercel.app` | Override the web app (used for the project link shown after submit) |
 
 ```bash
 # Point at a local backend
