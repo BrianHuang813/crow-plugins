@@ -136,8 +136,9 @@ Read every file that exists. Then use your judgment to extract values for these 
 |---|---|---|
 | `PROJ_NAME` | `package.json → .name`, `pyproject.toml → [project].name or [tool.poetry].name`, `Cargo.toml → [package].name`, `README.md → first # heading` | Required. Use the exact string from the file. |
 | `PROJ_DESC` | `package.json → .description`, `pyproject.toml → [project].description or [tool.poetry].description`, `Cargo.toml → [package].description`, `README.md → first paragraph after heading` | Optional. Truncate to 200 chars. Empty string if not found. |
-| `PROJ_URL` | `package.json → .homepage`, `pyproject.toml → [project.urls].Homepage`, `Cargo.toml → [package].homepage`, `README.md → first demo/homepage URL` | Optional. Must start with `http://` or `https://`. Empty string if not found or invalid. |
+| `PROJ_URL` | `package.json → .homepage`, `pyproject.toml → [project.urls].Homepage`, `Cargo.toml → [package].homepage`, `README.md → first demo/homepage URL` | Optional. Must start with `http://` or `https://`. This is the product/demo homepage **only** — never the source repository (use `PROJ_REPO` for that). Empty string if not found or invalid. |
 | `PROJ_TAGS` | Derived from all files | Optional. At most 5 comma-separated tags. Prioritise: programming language, primary framework, key infrastructure. Skip dev-only tools (eslint, prettier, pytest, jest). Empty string if nothing meaningful found. |
+| `PROJ_REPO` | `git remote get-url origin` | Optional. The project's GitHub repository, normalised to `https://github.com/owner/repo`. Use as default repo metadata — **do not** put it in `PROJ_URL`. Empty string if there is no GitHub remote. |
 
 **Examples of good tech_tags extraction:**
 - `package.json` with react + express + pg → `"JavaScript,React,Express,PostgreSQL"`
@@ -149,11 +150,20 @@ After reading the files and deciding on values, substitute your detected values 
 ```bash
 PROJ_NAME=""   # required — e.g. "Crow"
 PROJ_DESC=""   # optional, ≤200 chars
-PROJ_URL=""    # optional, must be http(s):// or empty
+PROJ_URL=""    # optional product/demo homepage, must be http(s):// or empty — NEVER the repo
 PROJ_TAGS=""   # optional, ≤5 comma-separated, e.g. "Python,FastAPI,PostgreSQL"
+
+# Auto-detect the GitHub repo from git as default repo metadata.
+# This is kept separate from PROJ_URL on purpose — it must never overwrite the
+# product/demo homepage. Normalises git@ and token URLs to a clean https form.
+PROJ_REPO=$(git remote get-url origin 2>/dev/null \
+  | sed -E 's#^git@github\.com:#https://github.com/#; s#^https://[^/@]*@#https://#; s#\.git$##')
+[[ "$PROJ_REPO" == https://github.com/* ]] || PROJ_REPO=""
 ```
 
-Try sources in the order listed; use the first non-empty value found.
+Try sources in the order listed; use the first non-empty value found. Never fall
+back to the GitHub repo for `PROJ_URL` — if there is no real homepage, leave
+`PROJ_URL` empty and let `PROJ_REPO` carry the repository.
 
 If no project files exist at all and `PROJ_NAME` is still empty, set it to empty string — Step 3 will prompt the user to fill it in.
 
@@ -172,6 +182,7 @@ echo "  ├──────────────┬────────
 printf "  │ %-12s │ %-43s│\n" "name"        "${PROJ_NAME:-(none — required)}"
 printf "  │ %-12s │ %-43s│\n" "description" "${PROJ_DESC:-(none)}"
 printf "  │ %-12s │ %-43s│\n" "url"         "${PROJ_URL:-(none)}"
+printf "  │ %-12s │ %-43s│\n" "repo"        "${PROJ_REPO:-(none)}"
 printf "  │ %-12s │ %-43s│\n" "tech_tags"   "${PROJ_TAGS:-(none)}"
 echo "  └──────────────┴───────────────────────────────────────────┘"
 echo ""
@@ -181,7 +192,7 @@ Now enter the edit-and-confirm loop. Ask the user:
 
 ```bash
 echo "  Submit? (Y/n)  — or type a field name to edit:"
-echo "  Fields: name / description / url / tech_tags"
+echo "  Fields: name / description / url / repo / tech_tags"
 echo ""
 read -r CONFIRM_INPUT
 ```
@@ -221,6 +232,17 @@ Handle the input:
   ```
   Return to **STEP 3 LOOP TOP** — re-run both the preview-table block and the prompt block.
 
+- **`repo`:**
+  ```bash
+  echo "  New GitHub repo (https://github.com/owner/repo):"
+  read -r PROJ_REPO
+  if [ -n "$PROJ_REPO" ] && [[ "$PROJ_REPO" != https://github.com/* ]]; then
+    echo "  ✗ Repo must be a https://github.com/ URL — cleared."
+    PROJ_REPO=""
+  fi
+  ```
+  Return to **STEP 3 LOOP TOP** — re-run both the preview-table block and the prompt block.
+
 - **`tech_tags`:**
   ```bash
   echo "  New tech tags (comma-separated, max 5 — e.g. Python,FastAPI,Redis):"
@@ -243,7 +265,7 @@ print(','.join(tags[:5]))
 Build the JSON request body using environment variables and a Python heredoc (avoids shell quoting issues):
 
 ```bash
-export PROJ_NAME PROJ_DESC PROJ_URL PROJ_TAGS
+export PROJ_NAME PROJ_DESC PROJ_URL PROJ_TAGS PROJ_REPO
 BODY_FILE=$(mktemp -t crow_body)
 export BODY_FILE
 trap 'rm -f "$BODY_FILE"' EXIT
@@ -254,10 +276,12 @@ import json, os
 body = {'name': os.environ['PROJ_NAME']}
 desc = os.environ.get('PROJ_DESC', '').strip()
 url  = os.environ.get('PROJ_URL', '').strip()
+repo = os.environ.get('PROJ_REPO', '').strip()
 tags_raw = os.environ.get('PROJ_TAGS', '').strip()
 
 if desc: body['description'] = desc
 if url:  body['url'] = url
+if repo: body['repo'] = repo  # ignored by the API until it adds a repo field
 if tags_raw:
     body['tech_tags'] = [t.strip() for t in tags_raw.split(',') if t.strip()][:5]
 
