@@ -17,6 +17,54 @@ CROW_WEB="${CROW_WEB_URL:-https://crow-eight.vercel.app}"
 TOKEN_FILE="$HOME/.crow/token"
 ```
 
+## Step 0 — Version Check
+
+Confirm this plugin is new enough for the current API before doing anything
+else. The server returns `latest` and `min_supported`; if this client is below
+`min_supported` we must stop and ask the user to update.
+
+```bash
+# Local version comes from the plugin's own manifest (single source of truth).
+CLIENT_VERSION=$(python3 -c "import json,os; p=os.path.join(os.environ.get('CLAUDE_PLUGIN_ROOT',''), '.claude-plugin','plugin.json'); print(json.load(open(p)).get('version','0.0.0'))" 2>/dev/null || echo "0.0.0")
+
+VER_JSON=$(curl -s --max-time 5 "$CROW_API/api/client/version")
+
+CLIENT_VERSION="$CLIENT_VERSION" VER_JSON="$VER_JSON" python3 <<'PYEOF'
+import os, json, sys
+
+def parse(v):
+    out = [int(x) for x in str(v).strip().lstrip('v').split('.') if x.isdigit()]
+    return out or [0]
+
+def lt(a, b):
+    pa, pb = parse(a), parse(b)
+    n = max(len(pa), len(pb)); pa += [0]*(n-len(pa)); pb += [0]*(n-len(pb))
+    return pa < pb
+
+client = os.environ.get('CLIENT_VERSION', '0.0.0')
+try:
+    info = json.loads(os.environ.get('VER_JSON') or '')
+except Exception:
+    sys.exit(0)  # version service unreachable — never block on a network blip
+
+latest = info.get('latest'); minv = info.get('min_supported'); msg = info.get('message')
+
+if minv and lt(client, minv):
+    print(f"  ✗ crow-submit {client} is no longer supported (minimum {minv}).")
+    if msg: print(f"    {msg}")
+    print("    Update: in Claude Code run /plugin → crow marketplace → update crow-submit, then retry.")
+    sys.exit(1)
+
+if latest and lt(client, latest):
+    print(f"  ⚠ A newer crow-submit is available ({client} → {latest}). Update via /plugin when convenient.")
+PYEOF
+VERSION_STATUS=$?
+```
+
+**If `VERSION_STATUS` is non-zero (client below `min_supported`), STOP here** —
+print nothing further and do not run any later step. Otherwise continue (a soft
+`⚠` notice is informational only).
+
 ## Step 1 — Authenticate
 
 Check whether a saved token exists:
