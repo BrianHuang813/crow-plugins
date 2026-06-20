@@ -7,7 +7,8 @@ A Claude Code plugin that submits your project to the [Crow Digital Darwinism gr
 1. **Authenticates** via GitHub Device Flow (one-time setup; token cached at `~/.crow/token` for 30 days)
 2. **Detects** your project name, description, URL, and tech stack from `package.json`, `pyproject.toml`, `Cargo.toml`, or `README.md`
 3. **Lets you edit** any field before submitting
-4. **Submits** to the grid and shows you the live link
+4. **Invites you to share a public GitHub repo** (opt-in) so others can collaborate and help your project survive — your git remote is never shared automatically, so private repos stay private
+5. **Submits** to the grid and shows you the live link
 
 ## Install
 
